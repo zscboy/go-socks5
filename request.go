@@ -142,6 +142,9 @@ func (s *Server) handleRequest(req *Request, conn conn) error {
 	// Switch on the command
 	switch req.Command {
 	case ConnectCommand:
+		if s.config.CustomConnectHandler != nil {
+			return s.handlerCustomConnect(ctx, conn, req)
+		}
 		return s.handleConnect(ctx, conn, req)
 	case BindCommand:
 		return s.handleBind(ctx, conn, req)
@@ -153,6 +156,31 @@ func (s *Server) handleRequest(req *Request, conn conn) error {
 		}
 		return fmt.Errorf("Unsupported command: %v", req.Command)
 	}
+}
+
+// handlerCustomConnect is used to handle a custom connection
+func (s *Server) handlerCustomConnect(ctx context.Context, conn conn, req *Request) error {
+	// Check if this is allowed
+	if ctx_, ok := s.config.Rules.Allow(ctx, req); !ok {
+		if err := sendReply(conn, ruleFailure, nil); err != nil {
+			return fmt.Errorf("Failed to send reply: %v", err)
+		}
+		return fmt.Errorf("Connect to %v blocked by rules", req.DestAddr)
+	} else {
+		ctx = ctx_
+	}
+
+	// TODO: Should connect to the target before responding successfully
+	if err := sendReply(conn, successReply, nil); err != nil {
+		return fmt.Errorf("Failed to send reply: %v", err)
+	}
+
+	c, ok := conn.(net.Conn)
+	if !ok {
+		fmt.Errorf("can not convert conn to net.Conn")
+	}
+
+	return s.config.CustomConnectHandler(c, req)
 }
 
 // handleConnect is used to handle a connect command
