@@ -49,7 +49,7 @@ type Config struct {
 	// Optional function for dialing out
 	Dial func(ctx context.Context, network, addr string) (net.Conn, error)
 
-	CustomConnectHandler func(conn conn, req *Request) error
+	CustomConnectHandler func(conn net.Conn, req *Request) error
 }
 
 // Server is reponsible for accepting connections and handling
