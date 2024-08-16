@@ -123,14 +123,18 @@ func (s *Server) handleRequest(req *Request, conn conn) error {
 	dest := req.DestAddr
 	if dest.FQDN != "" {
 		ctx_, addr, err := s.config.Resolver.Resolve(ctx, dest.FQDN)
-		if err != nil {
-			if err := sendReply(conn, hostUnreachable, nil); err != nil {
-				return fmt.Errorf("Failed to send reply: %v", err)
-			}
-			return fmt.Errorf("Failed to resolve destination '%v': %v", dest.FQDN, err)
+		// if err != nil {
+		// 	if err := sendReply(conn, hostUnreachable, nil); err != nil {
+		// 		return fmt.Errorf("Failed to send reply: %v", err)
+		// 	}
+		// 	return fmt.Errorf("Failed to resolve destination '%v': %v", dest.FQDN, err)
+		// }
+		if err == nil {
+			ctx = ctx_
+			dest.IP = addr
+		} else {
+			fmt.Printf("Failed to resolve destination '%v': %v\n", dest.FQDN, err)
 		}
-		ctx = ctx_
-		dest.IP = addr
 	}
 
 	// Apply any address rewrites
